@@ -1,1 +1,5 @@
+.DS_STORE
+TestImages/.DS_STORE
+*pyc
+Network/*.gif
 mask_rcnn_coco.h5
