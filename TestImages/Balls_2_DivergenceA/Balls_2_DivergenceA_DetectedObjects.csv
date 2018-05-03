@@ -1,4 +1,4 @@
-frame,id,score,x,y,dx,dy
+frame,id,score,x,y,x2,y2
 0,sports ball,0.84497195,68,71,120,118
 1,sports ball,0.7987015,68,71,121,119
 2,sports ball,0.9390186,69,73,123,123
