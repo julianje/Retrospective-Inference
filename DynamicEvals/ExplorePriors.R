@@ -13,11 +13,11 @@ PlotDiagnostics <- function(Network, Priors){
     ggtitle("Sampling distribution")
   p3 <- Priors %>% ggplot(aes(xmin=x,ymin=y,xmax=dx,ymax=dy))+
     geom_rect(alpha=0,color="#000000",alpha=1/64)+theme_classic()+
-    geom_rect(data=NetOutput,aes(xmin=x,ymin=y,xmax=dx,ymax=dy,fill=frame),alpha=1/16)+
+    geom_rect(data=Network,aes(xmin=x,ymin=y,xmax=dx,ymax=dy,fill=frame),alpha=1/16)+
     ggtitle("Sampled bounding boxes")
   p4 <- Priors %>% ggplot(aes(x,y))+geom_point(alpha=1/8)+
     theme_classic()+
-    geom_point(data=NetOutput,aes(x,y,color=frame))+
+    geom_point(data=Network,aes(x,y,color=frame))+
     ggtitle("Box anchors")
   grid.arrange(p1,p2,p3,p4,ncol=2)  
 }
@@ -36,6 +36,6 @@ NetOutput_ContactB <- read_csv("../TestImages/Balls_2_ContactB/Balls_2_ContactB_
 
 # Option 1: Gaussian distribution!
 PlotDiagnostics(NetOutput_DivergenceA,GaussianPrior(NetOutput_DivergenceA,1000))
-PlotDiagnostics(NetOutput_DivergenceA,GaussianPrior(NetOutput_ContactB,1000))
+PlotDiagnostics(NetOutput_ContactB,GaussianPrior(NetOutput_ContactB,1000))
 
 
