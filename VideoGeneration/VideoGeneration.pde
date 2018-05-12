@@ -6,7 +6,9 @@ float angle = 0.1;
 
 PImage img;
 
-int numBalls = 4;
+PrintWriter output;
+
+int numBalls = 3;
 float spring = 0.05;
 float gravity = 0.03;
 float friction = -0.9;
@@ -16,6 +18,9 @@ void setup() {
   size(640, 360);
   smooth();
   img = loadImage("basketball.png");
+  output = createWriter("output.csv");
+  output.println(mouseX + "t" + mouseY);
+  output.println("frame,id,score,x,y,x2,y2");
   for (int i = 0; i < numBalls; i++) {
     //balls[i] = new Ball(img, 70, 70, 50, i, balls);
     balls[i] = new Ball(img, random(width), random(height), 50, i, balls);
@@ -35,10 +40,15 @@ void draw() {
   for (Ball ball : balls) {
     //ball.collide();
     ball.move();
+    output.println(frameCount + ",sports ball,1," + ball.x + "," + ball.y + "," + ball.x+50 + "," + ball.y+50);
     ball.display();
   }
   gifExport.addFrame();
-  if (frameCount == 120) gifExport.finish();  
+  if (frameCount == 120){
+    gifExport.finish();
+    output.flush();
+    output.close();
+  }
 }
 
 class Ball {
