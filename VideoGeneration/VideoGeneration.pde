@@ -19,7 +19,6 @@ void setup() {
   smooth();
   img = loadImage("basketball.png");
   output = createWriter("output.csv");
-  output.println(mouseX + "t" + mouseY);
   output.println("frame,id,score,x,y,x2,y2");
   for (int i = 0; i < numBalls; i++) {
     //balls[i] = new Ball(img, 70, 70, 50, i, balls);
@@ -40,7 +39,9 @@ void draw() {
   for (Ball ball : balls) {
     //ball.collide();
     ball.move();
-    output.println(frameCount + ",sports ball,1," + ball.x + "," + ball.y + "," + ball.x+50 + "," + ball.y+50);
+    float dx = ball.x + 50;
+    float dy = ball.y + 50;
+    output.println(frameCount + ",sports ball,1," + ball.x + "," + ball.y + "," + dx + "," + dy);
     ball.display();
   }
   gifExport.addFrame();
