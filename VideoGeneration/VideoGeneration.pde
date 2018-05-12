@@ -8,7 +8,7 @@ PImage img;
 
 PrintWriter output;
 
-int numBalls = 3;
+int numBalls = 2;
 float spring = 0.05;
 float gravity = 0.03;
 float friction = -0.9;
@@ -56,8 +56,10 @@ class Ball {
   
   float x, y;
   float diameter;
-  float vx = randomGaussian();
-  float vy = randomGaussian();
+  //float vx = randomGaussian();
+  //float vy = randomGaussian();
+  float vx = 5;
+  float vy = -3;
   //float vx = 5 + random(2);
   //float vy = 5 + random(2);
   int id;
