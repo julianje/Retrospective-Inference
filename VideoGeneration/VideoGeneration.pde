@@ -8,7 +8,7 @@ PImage img;
 
 PrintWriter output;
 
-int numBalls = 2;
+int numBalls = 3;
 float spring = 0.05;
 float gravity = 0.03;
 float friction = -0.9;
@@ -22,7 +22,7 @@ void setup() {
   output.println("frame,id,score,x,y,x2,y2");
   for (int i = 0; i < numBalls; i++) {
     //balls[i] = new Ball(img, 70, 70, 50, i, balls);
-    balls[i] = new Ball(img, random(width), random(height), 50, i, balls);
+    balls[i] = new Ball(img, 50, 300, 50, i, balls);
   }
   noStroke();
   background(0);
@@ -58,8 +58,8 @@ class Ball {
   float diameter;
   //float vx = randomGaussian();
   //float vy = randomGaussian();
-  float vx = 5;
-  float vy = -3;
+  float vx = 5 + randomGaussian();
+  float vy = -3 + randomGaussian();
   //float vx = 5 + random(2);
   //float vy = 5 + random(2);
   int id;
