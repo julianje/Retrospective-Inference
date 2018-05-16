@@ -2,61 +2,91 @@ library(tidyverse)
 library(gtable)
 library(grid)
 library(gridExtra)
+library(plgp)
+library(MASS)
 
-PlotDiagnostics <- function(Network, Priors, StimName=""){
-  p1 <- ggplot(Network,aes(xmin=x,ymin=y,xmax=x2,ymax=y2,fill=frame))+
-    geom_rect(alpha=1/16,color="#000000")+
-    theme_classic()+ggtitle("Mask_RCNN trace")+coord_fixed()
-  TA <- Priors %>%
-    gather(variable,value,x,y,x2,y2) %>%
-    dplyr::select(-distx,-disty) %>% mutate(source="Prior")
-  TB <- gather(Network,variable,value,x,y,x2,y2) %>%
-    dplyr::select(-frame,-id,-score) %>% mutate(source="Mark_RCNN")
-  Full <- rbind(TA,TB)
-  p2 <- Full %>%
-    ggplot(aes(value,fill=source))+geom_density(alpha=3/4)+theme_classic()+
-    facet_wrap(~variable,scales="free")+
-    ggtitle("Sampling distribution")+scale_fill_manual(values=c("#424242","#0099ff"))
-  p3 <- Priors %>% ggplot(aes(xmin=x,ymin=y,xmax=x2,ymax=y2))+
-    geom_rect(alpha=1/8,fill="#000000",colour="black",linetype="dashed")+theme_classic()+
-    geom_rect(data=Network,aes(xmin=x,ymin=y,xmax=x2,ymax=y2,fill=frame),alpha=1/16)+
-    ggtitle("Sampled bounding boxes")+coord_fixed()
-  p4 <- Priors %>% ggplot(aes(x,y))+geom_point(alpha=1/8)+
-    theme_classic()+
-    geom_point(data=Network,aes(x,y,color=frame))+
-    ggtitle("Box anchors ((x,y) samples)")+coord_fixed()
-  Title = paste(StimName,"using",nrow(Priors),"samples from the Prior")
-  grid.arrange(p1,p2,p3,p4,ncol=2,
-               top = textGrob(Title,gp=gpar(fontsize=20,font=1)))  
+gaussprocess <- function(from = 0, to = 1, K,
+                         start = NULL, m = 1000) {
+  t <- seq(from = from, to = to, length.out = m)
+  Sigma <- sapply(t, function(s1) {
+    sapply(t, function(s2) {
+      K(s1, s2)
+    })
+  })
+  path <- mvrnorm(mu = rep(0, times = m), Sigma = Sigma)
+  if (!is.null(start)) { path <- path - path[1] + start }
+  return(data.frame("t" = t, "xt" = path))
 }
 
-GaussianPrior <- function(Network, sampleno){
-  Samples <- data.frame(
-    x = rnorm(sampleno, mean(Network$x), sd(Network$x)),
-    y = rnorm(sampleno, mean(Network$y), sd(Network$y)),
-    distx = rnorm(sampleno, mean(Network$x2-Network$x), sd(Network$x2-Network$x)),
-    disty = rnorm(sampleno, mean(Network$y2-Network$y), sd(Network$y2-Network$y))
-  ) %>% mutate(x2=x+max(0,distx),y2=y+max(0,disty))
+SampleGPs <- function(K, Kb = NULL, samples = 5,
+                      m = 1000, start = NULL,
+                      from = 0, to = 1, plotit = TRUE){
+  if (is.null(Kb)){
+    Kb = K
+  }
+  samples <- do.call(rbind,lapply(1:samples,function(x){
+    full_join(gaussprocess(from, to, K, start, m),rename(gaussprocess(from, to, Kb, start, m),yt=xt),by="t") %>% mutate(sample=x)
+    }))
+  if (plotit){
+    samples %>% ggplot(aes(xt,yt,color=factor(sample),order=t,group=factor(sample)))+geom_path()+theme_classic()+
+      scale_x_continuous("")+scale_y_continuous("")+ theme(legend.position="none")
+  }
+  else{return(samples)}
 }
 
-NetOutput_DivergenceA <- read_csv("../Data/Balls_2_DivergenceA/Balls_2_DivergenceA_DetectedObjects.csv")
-NetOutput_DivergenceB <- read_csv("../Data/Balls_2_DivergenceB/Balls_2_DivergenceB_DetectedObjects.csv")
-NetOutput_ContactA <- read_csv("../Data/Balls_2_ContactA/Balls_2_ContactA_DetectedObjects.csv")
-NetOutput_ContactB <- read_csv("../Data/Balls_2_ContactB/Balls_2_ContactB_DetectedObjects.csv")
-NetOutput_ClownCar <- read_csv("../Data/Balls_4_Clowncar/Balls_4_Clowncar_DetectedObjects.csv")
-NetOutput_Spread <- read_csv("../Data/Balls_4_Spread/Balls_4_Spread_DetectedObjects.csv")
-NetOutput_NoContact <- read_csv("../Data/Balls_2_NoContact/Balls_2_NoContact_DetectedObjects.csv")
+ExploreGP <- function(KernelGenerator, params, m=100, samples = 50){
+  print("no this is very broken")
+  return(0)
+  AllSamples <- lapply(1:dim(params)[1],function(i){
+    temp <- crossing(SampleGPs(do.call(KernelGenerator,unname(as.list(as.data.frame(t(params[i,])))[1])),m=m,samples=samples,plotit=FALSE),data.frame(params[i,]))
+    return(temp)})
+  AllSamples <- do.call(rbind,AllSamples)
+  return(AllSamples)
+}
 
-# Option 1: Gaussian distribution!
-SampleNo = 1000
-PlotDiagnostics(NetOutput_DivergenceA,GaussianPrior(NetOutput_DivergenceA,SampleNo),"DivergenceA")
-PlotDiagnostics(NetOutput_DivergenceB,GaussianPrior(NetOutput_DivergenceB,SampleNo),"DivergenceB")
-PlotDiagnostics(NetOutput_ContactA,GaussianPrior(NetOutput_ContactA,SampleNo),"ContactA")
-PlotDiagnostics(NetOutput_ContactB,GaussianPrior(NetOutput_ContactB,SampleNo),"ContactB")
-PlotDiagnostics(NetOutput_ClownCar,GaussianPrior(NetOutput_ClownCar,SampleNo),"ClownCar")
-PlotDiagnostics(NetOutput_Spread,GaussianPrior(NetOutput_Spread,SampleNo),"Spread")
-PlotDiagnostics(NetOutput_NoContact,GaussianPrior(NetOutput_NoContact,SampleNo),"NoContact")
+# Brownian motion
+WienerKernel <- function() {return(function(s, t){min(s, t)})}
+# Linear kernel
+# c is the offset
+LinearKernel <- function(variance, cvariance, c) {return(function(s, t){variance*(s-c)*(t-c)+cvariance})}
+# Gaussian kernel
+GaussKernel <- function(x) {return(function(s,t){return(exp(-x*(s-t)^2))})}
+# These are common in SVMs
+# Squared-exponential kernel
+SEKernel <- function(scale,variance) {return(function(s,t){return(variance*exp(-((s-t)^2)/(2*scale^2)))})}
+# Rational quadratic kernel
+# Variation is alpha, which is relative weighting of large and small scale variation
+# as alpha -> infinity RQKernel converges to SEKernel.
+RQKernel <- function(scale, variance, variation) {return(function(s,t){
+  variance*(1 + ((s-t)^2/(2*variation*scale^2)))^(-variation)
+})}
+# Periodic Kernel. Takes lengthscale and period.
+PeriodicKernel <- function(variance, l, p) {return(function(s,t){
+  val <- variance*exp((-2/l^2)*sin(pi*(abs(s-t)/p))^2)
+  return(val)
+  })}
 
-# Option 2: Log-normal to prevent proposing zero-heigh boxes.
-PlotDiagnostics(NetOutput_DivergenceA,LogNormalPrior(NetOutput_DivergenceA,500))
-PlotDiagnostics(NetOutput_ContactB,LogNormalPrior(NetOutput_ContactB,500))
+SampleGPs(LinearKernel(5,2,0.3),m=100,samples=50)
+SampleGPs(WienerKernel(),m=100)
+SampleGPs(GaussKernel(8),m=100,samples=30)
+SampleGPs(SEKernel(3),m=100)
+SampleGPs(PeriodicKernel(5,3,2),m=100,samples=50)
+
+QuickPlotHack <- function(plots){
+  do.call(grid.arrange,plots)
+}
+
+QuickPlotHack(list(SampleGPs(LinearKernel(5,2,0.3),m=100,samples=50),
+              SampleGPs(LinearKernel(5,2,0.3),m=100,samples=50),
+              SampleGPs(LinearKernel(5,2,0.3),m=100,samples=50),
+              SampleGPs(LinearKernel(5,2,0.3),m=100,samples=50)))
+
+QuickPlotHack(list(SampleGPs(SEKernel(1,1),m=100,samples=50),
+                   SampleGPs(SEKernel(1,50),m=100,samples=50),
+                   SampleGPs(SEKernel(0.5,1),m=100,samples=50),
+                   SampleGPs(SEKernel(1,0.5),m=100,samples=50)))
+
+QuickPlotHack(list(SampleGPs(RQKernel(1,1,1),m=100,samples=50),
+                   SampleGPs(RQKernel(1,50,1),m=100,samples=50),
+                   SampleGPs(RQKernel(0.5,1,1),m=100,samples=50),
+                   SampleGPs(RQKernel(1,0.5,1),m=100,samples=50)))
